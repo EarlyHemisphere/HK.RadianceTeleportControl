@@ -9,7 +9,7 @@ using HutongGames.PlayMaker.Actions;
 
 public class RadianceTeleportControl : Mod, ICustomMenuMod, ILocalSettings<LocalSettings>{
     internal static RadianceTeleportControl instance;
-    private PlayMakerFSM absRadControl;
+    private List<PlayMakerFSM> absRadControlFSMs = new List<PlayMakerFSM>();
     private Menu menuRef, platsPhaseMenu, finalPhaseMenu = null;
     public static Dictionary<string, bool> platsPhaseDefaults = new Dictionary<string, bool>() {
         { "farLeft", true },
@@ -143,8 +143,8 @@ public class RadianceTeleportControl : Mod, ICustomMenuMod, ILocalSettings<Local
     private void OnFsmEnable(On.PlayMakerFSM.orig_OnEnable orig, PlayMakerFSM self) {
         orig(self);
 
-        if (self.FsmName == "Control" && self.gameObject.name == "Absolute Radiance") {
-            absRadControl = self;
+        if (self.FsmName == "Control" && self.gameObject.name.Contains("Absolute Radiance")) {
+            absRadControlFSMs.Add(self);
             ChangeTeleports();
         }
     }
@@ -155,8 +155,8 @@ public class RadianceTeleportControl : Mod, ICustomMenuMod, ILocalSettings<Local
             (platsPhaseMenu.Find(key) as HorizontalOption).Update();
         }
 
-        if (absRadControl) {
-            absRadControl.GetAction<SendRandomEvent>("A2 Tele Choice", 0).weights = new FsmFloat[]{1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f};
+        if (absRadControlFSMs.Count > 0) {
+            absRadControlFSMs.ForEach(fsm => fsm.GetAction<SendRandomEvent>("A2 Tele Choice", 0).weights = new FsmFloat[]{1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f});
             AddPlatsTeleportBiases();
         }
     }
@@ -167,14 +167,14 @@ public class RadianceTeleportControl : Mod, ICustomMenuMod, ILocalSettings<Local
             (finalPhaseMenu.Find(key) as HorizontalOption).Update();
         }
 
-        if (absRadControl) {
-            absRadControl.GetAction<SendRandomEvent>("A2 Tele Choice 2", 0).weights = new FsmFloat[]{1f, 1f, 1f};
+        if (absRadControlFSMs.Count > 0) {
+            absRadControlFSMs.ForEach(fsm => fsm.GetAction<SendRandomEvent>("A2 Tele Choice 2", 0).weights = new FsmFloat[]{1f, 1f, 1f});
             AddFinalPhaseTeleportBiases();
         }
     }
 
     private void ChangeTeleports() {
-        if (!absRadControl) { return; }
+        if (absRadControlFSMs.Count == 0) { return; }
 
         FsmFloat[] platsWeights = new FsmFloat[10];
         FsmFloat[] finalPhaseWeights = new FsmFloat[3];
@@ -186,8 +186,10 @@ public class RadianceTeleportControl : Mod, ICustomMenuMod, ILocalSettings<Local
             finalPhaseWeights[i] = localSettings.finalPhase[finalPhaseTeleportOrdering[i]] ? 1f : 0f;
         }
 
-        absRadControl.GetAction<SendRandomEvent>("A2 Tele Choice", 0).weights = platsWeights;
-        absRadControl.GetAction<SendRandomEvent>("A2 Tele Choice 2", 0).weights = finalPhaseWeights;
+        absRadControlFSMs.ForEach(fsm => {
+            fsm.GetAction<SendRandomEvent>("A2 Tele Choice", 0).weights = platsWeights;
+            fsm.GetAction<SendRandomEvent>("A2 Tele Choice 2", 0).weights = finalPhaseWeights;
+        });
 
         if (platsWeights.All(weight => weight.Value == 1f)) {
             AddPlatsTeleportBiases();
@@ -202,38 +204,38 @@ public class RadianceTeleportControl : Mod, ICustomMenuMod, ILocalSettings<Local
     }
 
     private void RemovePlatsTeleportBiases() {
-        if (!absRadControl) { return; }
+        if (absRadControlFSMs.Count == 0) { return; }
         Modding.Logger.Log("Removing plats biases");
 
         for (int i = 1; i < 11; i++) {
-            absRadControl.GetAction<IntCompare>($"Tele {i}", 0).integer2 = -1;
+            absRadControlFSMs.ForEach(fsm => fsm.GetAction<IntCompare>($"Tele {i}", 0).integer2 = -1);
         }
     }
 
     private void AddPlatsTeleportBiases() {
-        if (!absRadControl) { return; }
+        if (absRadControlFSMs.Count == 0) { return; }
         Modding.Logger.Log("Adding plats biases");
 
         for (int i = 1; i < 11; i++) {
-            absRadControl.GetAction<IntCompare>($"Tele {i}", 0).integer2 = i;
+            absRadControlFSMs.ForEach(fsm => fsm.GetAction<IntCompare>($"Tele {i}", 0).integer2 = i);
         }
     }
 
     private void RemoveFinalPhaseTeleportBiases() {
-        if (!absRadControl) { return; }
+        if (absRadControlFSMs.Count == 0) { return; }
         Modding.Logger.Log("Removing final phase biases");
 
         for (int i = 1; i < 4; i++) {
-            absRadControl.GetAction<IntCompare>($"Tele 1{i}", 0).integer2 = -1;
+            absRadControlFSMs.ForEach(fsm => fsm.GetAction<IntCompare>($"Tele 1{i}", 0).integer2 = -1);
         }
     }
 
     private void AddFinalPhaseTeleportBiases() {
-        if (!absRadControl) { return; }
+        if (absRadControlFSMs.Count == 0) { return; }
         Modding.Logger.Log("Adding final phase biases");
 
         for (int i = 1; i < 4; i++) {
-            absRadControl.GetAction<IntCompare>($"Tele 1{i}", 0).integer2 = i;
+            absRadControlFSMs.ForEach(fsm => fsm.GetAction<IntCompare>($"Tele 1{i}", 0).integer2 = i);
         }
     }
 
