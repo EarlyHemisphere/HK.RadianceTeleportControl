@@ -57,6 +57,7 @@ public class RadianceTeleportControl : Mod, ICustomMenuMod, ILocalSettings<Local
 
         instance = this;
         On.PlayMakerFSM.OnEnable += OnFsmEnable;
+        UnityEngine.SceneManagement.SceneManager.activeSceneChanged += SceneChanged;
 
         Log("Initialized");
     }
@@ -146,6 +147,12 @@ public class RadianceTeleportControl : Mod, ICustomMenuMod, ILocalSettings<Local
         if (self.FsmName == "Control" && self.gameObject.name.Contains("Absolute Radiance")) {
             absRadControlFSMs.Add(self);
             ChangeTeleports();
+        }
+    }
+
+    private void SceneChanged(UnityEngine.SceneManagement.Scene _, UnityEngine.SceneManagement.Scene to) {
+        if (to.name != "GG_Radiance") {
+            absRadControlFSMs = new List<PlayMakerFSM>();
         }
     }
 
