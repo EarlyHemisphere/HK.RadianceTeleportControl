@@ -11,6 +11,8 @@ public class RadianceTeleportControl : Mod, ICustomMenuMod, ILocalSettings<Local
     internal static RadianceTeleportControl instance;
     private List<PlayMakerFSM> absRadControlFSMs = new List<PlayMakerFSM>();
     private Menu menuRef, platsPhaseMenu, finalPhaseMenu = null;
+    private static RngIndicatorUI indicatorUI;
+    // I don't know why I wrote it like this instead of just using an array of strings but I'm too lazy to re-write it
     public static Dictionary<string, bool> platsPhaseDefaults = new Dictionary<string, bool>() {
         { "farLeft", true },
         { "farLeftUpper", true },
@@ -58,6 +60,7 @@ public class RadianceTeleportControl : Mod, ICustomMenuMod, ILocalSettings<Local
         instance = this;
         On.PlayMakerFSM.OnEnable += OnFsmEnable;
         UnityEngine.SceneManagement.SceneManager.activeSceneChanged += SceneChanged;
+        indicatorUI = new GameObject("RadianceTeleportRngIndicator").AddComponent<RngIndicatorUI>();
 
         Log("Initialized");
     }
@@ -147,6 +150,17 @@ public class RadianceTeleportControl : Mod, ICustomMenuMod, ILocalSettings<Local
         if (self.FsmName == "Control" && self.gameObject.name.Contains("Absolute Radiance")) {
             absRadControlFSMs.Add(self);
             ChangeTeleports();
+
+            self.AddAction("Abyss Up", new CallMethod {
+                behaviour = new FsmObject { Value = indicatorUI },
+                methodName = "ShowPlatsPhaseIfAltered",
+                parameters = new FsmVar[0]
+            });
+            self.AddAction("Scream", new CallMethod {
+                behaviour = new FsmObject { Value = indicatorUI },
+                methodName = "ShowFinalPhaseIfAltered",
+                parameters = new FsmVar[0]
+            });
         }
     }
 
@@ -244,6 +258,24 @@ public class RadianceTeleportControl : Mod, ICustomMenuMod, ILocalSettings<Local
         for (int i = 1; i < 4; i++) {
             absRadControlFSMs.ForEach(fsm => fsm.GetAction<IntCompare>($"Tele 1{i}", 0).integer2 = i);
         }
+    }
+
+    public bool PlatsTeleportsAreDefault() {
+        foreach (string key in localSettings.platsPhase.Keys) {
+            if (localSettings.platsPhase[key] != platsPhaseDefaults[key]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public bool FinalPhaseTeleportsAreDefault() {
+        foreach (string key in localSettings.finalPhase.Keys) {
+            if (localSettings.finalPhase[key] != finalPhaseDefaults[key]) {
+                return false;
+            }
+        }
+        return true;
     }
 
     public override string GetVersion() => GetType().Assembly.GetName().Version.ToString();
